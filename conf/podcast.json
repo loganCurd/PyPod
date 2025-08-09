@@ -1,0 +1,9 @@
+{
+    "podcasts": [
+        {
+            "show_title" : "The Tim Dillon Show",
+            "folder_path" : "tds",
+            "rss_feed" : "https://audioboom.com/channels/5093219.rss"
+        }
+    ]
+}
