@@ -14,7 +14,6 @@ def main():
     for pod in podcast_list:
         pod.download_new_episodes()
  
-    # podcast_list[6].download_new_episodes()
     return 0
 
 if __name__ == '__main__':
