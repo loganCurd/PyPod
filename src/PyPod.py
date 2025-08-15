@@ -78,7 +78,7 @@ class Podcast:
                         for chunk in download_response.iter_content(chunk_size=10 * 1024):
                             file.write(chunk)
                         print("Download complete")
-                        self.last_ep_date = pub_date_str
+                        self.last_ep_date = pub_date_datetime
 
                 except:
                     print("Failed to open file for download: {0}".format(file_name))
