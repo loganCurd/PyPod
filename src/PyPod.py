@@ -1,3 +1,4 @@
+import json
 import requests
 import re
 from datetime import datetime
@@ -5,12 +6,10 @@ from glob import glob
 import xml.etree.ElementTree as xml
 
 
-def create_file_name(date, title):
-    date = get_condensed_date_str(date)
+def sanitize_file_name(title):
     sanitized_title = re.sub(r'\s+', r'_', title)
-    sanitized_title = re.sub(r'[^a-zA-Z0-9_]', r'', sanitized_title)
-    sanitized_title = "{0}_{1}".format(date, sanitized_title)
-    return "{0}.mp3".format(sanitized_title[:100])
+    sanitized_title = re.sub(r'[^a-zA-Z0-9_-]', r'', sanitized_title)
+    return sanitized_title[:100]
  
 def extract_text(element):
     if element is not None:
@@ -25,29 +24,28 @@ def convert_pubDate_to_datetime(pubDate):
         date_val = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %Z')
     return date_val
 
-def get_condensed_date_str(datetime):
-    return datetime.strftime("%Y%m%d")
 
 class Podcast:
     def __init__(self, pod_obj):
         self.show_title = pod_obj['show_title']
-        self.folder_path = pod_obj['folder_path']
+        self.folder_name = sanitize_file_name(self.show_title)
         self.rss_feed = pod_obj['rss_feed']
         self.last_ep_date = None
         last_ep_date_string = pod_obj['last_ep_date']
+        self.file_path = ""
         if len(last_ep_date_string) > 0:
             self.last_ep_date = convert_pubDate_to_datetime(pod_obj['last_ep_date'])
-        self.episodes = []
-
-        self.refresh_episode_list()
 
 
-    def refresh_episode_list(self):
-        return 0
+    def get_json(self):
+        pod_dict = dict(show_title = self.show_title, rss_feed = self.rss_feed)
+        pod_dict['last_ep_date'] = "" if self.last_ep_date == None else self.last_ep_date
+        return pod_dict
+
 
     def download_new_episodes(self):
-        #convert to session
-        with requests.get(self.rss_feed) as feed_response:
+        session = requests.Session()
+        with session.get(self.rss_feed) as feed_response:
             if  not feed_response.ok:
                 print("Failed to load RSS feed for {0}".format(self.show_title))
                 return
@@ -55,45 +53,52 @@ class Podcast:
         feed_xml = xml.fromstring(feed_content)
         episode_list = feed_xml.findall('.//item')
 
-        for i in range(1,len(episode_list)+1): #go in reverse order
-            episode = episode_list[-i]
+        for i in range(1,len(episode_list)+1):
+            episode = episode_list[-i] # iterate in reverse order
             pub_date_str = extract_text(episode.find('pubDate'))
             pub_date_datetime = convert_pubDate_to_datetime(pub_date_str)
 
-            if self.last_ep_date != None and pub_date_datetime < self.last_ep_date:
+            if self.last_ep_date != None and pub_date_datetime > self.last_ep_date:
                 continue
             episode_title = extract_text(episode.find('title'))
             link = extract_text(episode.find('link'))
-            if link == None: #fix
-                link = extract_text(episode.find('url'))
-            description = extract_text(episode.find('itunes:summary'))
-            if description == None: #fix
-                print("GOT WORSE DESCRIPTION")
-                description = extract_text(episode.find('description'))
+            if link == None:
+                link = episode.find('.//enclosure').attrib['url']
 
-            file_name = create_file_name(pub_date_datetime, episode_title)
+            file_name = "{0}.mp3".format(sanitize_file_name(episode_title))
 
-            with requests.get(link, stream=True) as download_response: #need to tag
+            with session.get(link, stream=True) as download_response:
                 print("Attempting to download episode: {0}".format(episode_title))
                 if not download_response.ok:
-                    print("Failed to get episode from source: {0}".format(link))
-                    continue
+                    print("Failed to get episode from source: {0}".format(download_response.status_code))
+                    return
                 try:
                     with open(file_name, mode="wb") as file:
                         for chunk in download_response.iter_content(chunk_size=10 * 1024):
                             file.write(chunk)
                         print("Download complete")
+                        self.last_ep_date = pub_date_str
 
                 except:
                     print("Failed to open file for download: {0}".format(file_name))
+                    return
 
             break #prevent downloading entire catalogue while testing
 
-            
-        
+def main():
 
-class Episode:
-    def __init__(self, title, description, link, date_str):
-        self.episode_title = title
-        self.description = description
-        self.link = link
+    try:
+        with open('../conf/podcast.json') as f:
+            d = json.load(f)
+    except:
+        print("FAILED to load config file")
+
+    podcast_list = [Podcast(y) for y in d['podcasts']]
+
+    for pod in podcast_list:
+        pod.download_new_episodes()
+ 
+    return 0
+
+if __name__ == '__main__':
+    main()
