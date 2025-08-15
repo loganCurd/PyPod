@@ -53,7 +53,7 @@ class Podcast:
     def download_new_episodes(self):
         session = requests.Session()
         with session.get(self.rss_feed) as feed_response:
-            if  not feed_response.ok:
+            if not feed_response.ok:
                 print("Failed to load RSS feed for {0}".format(self.show_title))
                 return
             feed_content = feed_response.content
