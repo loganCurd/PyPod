@@ -24,6 +24,10 @@ def convert_pubDate_to_datetime(pubDate):
         date_val = datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %Z')
     return date_val
 
+def convert_datetime_to_pubDate(datetime_date):
+    date_str = datetime_date.strftime('%a, %d %b %Y %H:%M:%S %z')
+    return date_str
+
 
 class Podcast:
     def __init__(self, pod_obj, download_folder):
@@ -39,7 +43,10 @@ class Podcast:
 
     def get_pod_obj(self):
         pod_dict = dict(show_title = self.show_title, rss_feed = self.rss_feed)
-        pod_dict['last_ep_date'] = "" if self.last_ep_date == None else self.last_ep_date
+        if self.last_ep_date == None:
+            pod_dict['last_ep_date'] = ""
+        else:
+            pod_dict['last_ep_date'] = convert_datetime_to_pubDate(self.last_ep_date)
         return pod_dict
 
 

@@ -3,7 +3,8 @@
     "podcasts": [
         {
             "show_title" : "The Tim Dillon Show",
-            "rss_feed" : "https://audioboom.com/channels/5093219.rss"
+            "rss_feed" : "https://audioboom.com/channels/5093219.rss",
+            "last_ep_date" : ""
         }
     ]
 }
