@@ -3,7 +3,6 @@ import requests
 import re
 import os
 from datetime import datetime
-from glob import glob
 import xml.etree.ElementTree as xml
 
 
